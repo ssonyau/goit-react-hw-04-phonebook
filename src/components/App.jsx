@@ -1,77 +1,81 @@
+import { ContactsForm } from './ContactForm/ContactsForm';
+import shortid from 'shortid';
+import { ContactsList } from './ContactsList/ContactsList';
+import { Filter } from './Filter/Filter';
+import 'index.css';
+import { Wrapper } from './App.styled';
+import { useEffect, useState } from 'react';
 
-import ContactForm from './contactForm/ContactForm';
-import ContactList from './contactList/ContactList';
-import Filter from './filter/Filter';
-import { nanoid } from 'nanoid';
-import css from './App.module.css';
-import React, { useState } from 'react';
+export const App = () => {
 
-
-
-
-const App = () => {
-const [contacts, setContacts] = useState([])
-const [filter, setFilter] = useState('')
-
-const filterContacs = () => {
-   const filteredContacts = contacts.filter(contact =>
-    contact.name.toLowerCase().includes(filter.toLowerCase())
+  const [contacts, setContact] = useState(
+    (JSON.parse(window.localStorage.getItem('contacts')) !== null &&
+      JSON.parse(window.localStorage.getItem('contacts')).length !== 0 &&
+      JSON.parse(window.localStorage.getItem('contacts'))) || [
+      { id: 'id-1', name: 'Rosie Simpson', number: '459-12-56' },
+      { id: 'id-2', name: 'Hermione Kline', number: '443-89-12' },
+      { id: 'id-3', name: 'Eden Clements', number: '645-17-79' },
+      { id: 'id-4', name: 'Annie Copeland', number: '227-91-26' },
+    ]
   );
-  return filteredContacts;
-};
 
-const searchEngine = evt => {
-  evt.preventDefault();
-  setFilter(evt.target.value)
-};
+  const [filter, setFilter] = useState('');
 
-const addContact = fieldResult => {
-  const newContact = {
-    id: nanoid(),
-    name: fieldResult.name,
-    number: fieldResult.number,
+  useEffect(() => {
+    window.localStorage.setItem('contacts', JSON.stringify(contacts));
+  }, [contacts]);
+
+  const handleSubmit = e => {
+    e.preventDefault();
+
+    const newContact = {
+      id: shortid.generate(),
+      name: e.target.name.value,
+      number: e.target.number.value,
+    };
+
+    const normalizedName = newContact.name.toLowerCase();
+
+    if (checkDobleName(normalizedName)) {
+      return alert(`${e.target.name.value} is already in contacts`);
+    }
+
+    setContact(state => [...state, newContact]);
+    e.target.name.value = '';
+    e.target.number.value = '';
   };
 
-  let presents = contacts.some(
-    item => item.name.toLowerCase() === newContact.name.toLowerCase()
-  );
-  if (presents === false) {
-    setContacts(prevContacts=>[...prevContacts,newContact]
-    )
-  
-  } else {
-    alert(`${newContact.name} is already in contacts`);
-  }
-};
+  const checkDobleName = name =>
+    contacts.find(contact => contact.name.toLowerCase() === name);
 
-const removeItem = elemName => {
-  setContacts(prevContacts=>prevContacts.filter(contact => contact.name !== elemName))
+  const handleFilter = e => {
+    setFilter(e.target.value);
+  };
 
-};
+  const getFilteredContacts = () => {
+    const normalizedFilter = filter.toLowerCase();
 
+    return contacts.filter(contact =>
+      contact.name.toLowerCase().includes(normalizedFilter)
+    );
+  };
 
+  const handleDelete = id => {
 
+    return setContact(state => state.filter(contact => contact.id !== id));
+  };
 
+  const filteredContacts = getFilteredContacts();
   return (
-    <div className={css.goitTemplateMarkup}>
-        <div>
-          <h1>Phonebook</h1>
-          <ContactForm addContact={addContact} />
-
-          <h2>Contacts</h2>
-          <Filter
-            searchEngine={searchEngine}
-            inputValue={filter}
-          />
-          <ContactList
-            filterContacs={filterContacs}
-            removeItem={removeItem}
-          />
-        </div>
-      </div>
-  )
-}
-
-export {App}
-
-
+    <Wrapper>
+      <h1>Phonebook</h1>
+      <ContactsForm onSubmit={handleSubmit} />
+      <h2>Contacts</h2>
+      <Filter filterQuery={filter} onChange={handleFilter} />
+      <ContactsList
+        contacts={filteredContacts}
+        onDeleteContact={handleDelete}
+      />
+    </Wrapper>
+  );
+};
